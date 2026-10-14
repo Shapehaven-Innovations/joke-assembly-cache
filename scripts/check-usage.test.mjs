@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { usageProblems } from "./check-usage.mjs";
+import { usageProblems, usageWarnings, windowLines } from "./check-usage.mjs";
 import { buildCounts } from "./build-counts.mjs";
 
 const SCRIPT = fileURLToPath(new URL("./check-usage.mjs", import.meta.url));
@@ -42,6 +42,19 @@ test("a missing or malformed usage block is a failure, not a pass", () => {
   }
 });
 
+test("a purge backlog is a warning, never a failure", () => {
+  assert.deepEqual(usageWarnings(exp(usage({ purgeBacklog: false }))), []);
+  assert.deepEqual(usageWarnings(exp(usage())), []);
+  assert.equal(usageWarnings(exp(usage({ purgeBacklog: true }))).length, 1);
+  assert.deepEqual(usageProblems(exp(usage({ purgeBacklog: true }))), []);
+  const dir = mkdtempSync(join(tmpdir(), "cu-"));
+  const file = join(dir, "export.json");
+  writeFileSync(file, JSON.stringify(exp(usage({ purgeBacklog: true }))));
+  const r = spawnSync(process.execPath, [SCRIPT, file], { encoding: "utf8" });
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /::warning::/);
+});
+
 test("buildCounts ignores usage and never publishes it", () => {
   const out = buildCounts(exp(usage()));
   assert.deepEqual(Object.keys(out), ["v", "generatedAt", "counts"]);
@@ -68,7 +81,24 @@ test("the workflow runs the usage check as the last step, after the counts were 
   const check = yml.indexOf("node scripts/check-usage.mjs export.json");
   assert.ok(check > 0, "check step present");
   assert.ok(check > yml.indexOf("actions/deploy-pages"), "runs after deploy");
-  assert.ok(check > yml.indexOf("Keepalive commit"), "runs last");
+  assert.ok(check > yml.indexOf("Daily history snapshot"), "runs last");
   assert.equal(yml.includes("usage"), true);
   assert.equal(/counts\.json[^\n]*usage/.test(yml), false);
+});
+
+test("window stats are printed as plain numbers and never change the verdict", () => {
+  const input = exp(usage({ windows: [{ start: 1792890000, rooms: 1, peak: 7, joins: 12 }, { start: "x" }, { start: 1, rooms: -1, peak: 0, joins: 0 }] }));
+  assert.deepEqual(windowLines(input), ["Joke Hour 2026-10-25 01:00 UTC: peak 7 people, 12 joins, 1 room"]);
+  assert.deepEqual(usageProblems(input), []);
+  assert.deepEqual(windowLines(exp(usage())), []);
+  assert.deepEqual(windowLines(exp(usage({ windows: "nope" }))), []);
+});
+
+test("the CLI prints the window lines to the log", () => {
+  const dir = mkdtempSync(join(tmpdir(), "usage-"));
+  const file = join(dir, "export.json");
+  writeFileSync(file, JSON.stringify(exp(usage({ windows: [{ start: 1792890000, rooms: 2, peak: 9, joins: 30 }] }))));
+  const r = spawnSync(process.execPath, [SCRIPT, file], { encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /check-usage: Joke Hour 2026-10-25 01:00 UTC: peak 9 people, 30 joins, 2 rooms/);
 });

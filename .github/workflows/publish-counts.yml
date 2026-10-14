@@ -4,8 +4,8 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch: {}
 permissions:
-  # contents: write is needed only by the keepalive step at the end, which pushes an
-  # empty commit so GitHub does not disable the schedule after 60 days of repo inactivity.
+  # contents: write is needed only by the daily history snapshot step at the end. Its one small commit a day also keeps the
+  # repository active, so GitHub never disables the schedule under the 60-day rule.
   contents: write
   pages: write
   id-token: write
@@ -21,10 +21,14 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The token is not left in .git/config: only the snapshot step below receives it.
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Export counts from the Worker
+        id: export
         env:
           EXPORT_KEY: ${{ secrets.EXPORT_KEY }}
           EXPORT_URL: ${{ vars.EXPORT_URL }}
@@ -32,24 +36,34 @@ jobs:
           curl --fail --silent --show-error --proto '=https' --max-time 30 --retry 2 -H "X-Export-Key: $EXPORT_KEY" "$EXPORT_URL" -o export.json
       - name: Build counts.json
         run: node scripts/build-counts.mjs export.json public/counts.json
+      - name: Build top.json (never blocks counts)
+        run: node scripts/build-top.mjs public/counts.json history public/top.json || echo "::warning::top.json was not built"
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: public
       - id: deploy
         uses: actions/deploy-pages@v5
-      - name: Keepalive commit (avoid the 60-day scheduled-workflow disable)
+      # After the deploy on purpose: a failed push never delays counts.json or top.json. Pushes made with GITHUB_TOKEN start no
+      # new workflow run, and only public/ is published, so history/ is never served.
+      - name: Daily history snapshot (one commit a UTC day)
         if: ${{ !github.event.repository.fork }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
-          last=$(git log -1 --format=%ct)
-          now=$(date +%s)
-          if [ $((now - last)) -gt $((45 * 86400)) ]; then
+          day=$(node scripts/snapshot-history.mjs public/counts.json history)
+          if [ -n "$day" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit --allow-empty -m "keepalive"
-            git push
+            git add -A history
+            git diff --cached --quiet || git commit -m "history: $day"
+            remote="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+            git pull --rebase "$remote" "$GITHUB_REF_NAME"
+            git push "$remote" "HEAD:$GITHUB_REF_NAME"
           fi
       # Last on purpose: the counts are already published. A failed run is how the owner is told (GitHub emails failed runs;
-      # the Workers Free plan has no usage notifications). The usage numbers are never written to counts.json.
+      # the Workers Free plan has no usage notifications). The usage numbers are never written to counts.json or top.json.
       - name: Fail the run when Worker usage is over 70% of its daily limits
+        if: ${{ !cancelled() && steps.export.outcome == 'success' }}
         run: node scripts/check-usage.mjs export.json
