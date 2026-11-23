@@ -24,6 +24,8 @@ jobs:
         with:
           # The token is not left in .git/config: only the snapshot step below receives it.
           persist-credentials: false
+          # The branch tip, not the commit GitHub pinned when the run was created: a scheduled run can start hours late.
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -51,17 +53,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-        run: |
-          day=$(node scripts/snapshot-history.mjs public/counts.json history)
-          if [ -n "$day" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A history
-            git diff --cached --quiet || git commit -m "history: $day"
-            remote="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
-            git pull --rebase "$remote" "$GITHUB_REF_NAME"
-            git push "$remote" "HEAD:$GITHUB_REF_NAME"
-          fi
+        # The script syncs to the remote tip before deciding, and retries a lost push race (see its header comment).
+        run: bash scripts/publish-snapshot.sh public/counts.json history
       # Last on purpose: the counts are already published. A failed run is how the owner is told (GitHub emails failed runs;
       # the Workers Free plan has no usage notifications). The usage numbers are never written to counts.json or top.json.
       - name: Fail the run when Worker usage is over 70% of its daily limits

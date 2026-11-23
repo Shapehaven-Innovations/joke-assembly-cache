@@ -59,7 +59,7 @@ test("workflow: no keepalive, snapshot after deploy, check-usage still runs when
   const yml = readText(WORKFLOW, "utf8");
   assert.equal(/keepalive/i.test(yml), false, "the keepalive step is replaced by the daily snapshot commit");
   const deploy = yml.indexOf("actions/deploy-pages");
-  const snap = yml.indexOf("node scripts/snapshot-history.mjs public/counts.json history");
+  const snap = yml.indexOf("scripts/publish-snapshot.sh public/counts.json history");
   const top = yml.indexOf("node scripts/build-top.mjs public/counts.json history public/top.json");
   const check = yml.indexOf("node scripts/check-usage.mjs export.json");
   assert.ok(top > 0 && top < yml.indexOf("actions/upload-pages-artifact"), "top.json is built before the upload");
@@ -68,8 +68,9 @@ test("workflow: no keepalive, snapshot after deploy, check-usage still runs when
   assert.ok(check > snap, "check-usage is last");
   assert.ok(/!cancelled\(\) && steps\.export\.outcome == 'success'/.test(yml), "check-usage keeps !cancelled()");
   assert.ok(/id: export/.test(yml));
-  assert.ok(/git add -A history/.test(yml), "only history/ is committed");
-  assert.equal(/git add[^\n]*export\.json/.test(yml), false, "the raw export is never committed");
+  const sh = readText(fileURLToPath(new URL("./publish-snapshot.sh", import.meta.url)), "utf8");
+  assert.ok(/git add -A "\$dir"/.test(sh), "only the history dir is committed");
+  assert.equal(/git add[^\n]*export\.json/.test(sh + yml), false, "the raw export is never committed");
   assert.ok(/if: \$\{\{ !github\.event\.repository\.fork \}\}/.test(yml));
   assert.ok(/cancel-in-progress: false/.test(yml), "runs never push at once");
   assert.equal(/on:\s*\n\s*push/.test(yml), false, "a push never starts the workflow");
@@ -81,8 +82,11 @@ test("workflow: credentials are not persisted, the token reaches only the push s
   const snapStep = yml.slice(yml.indexOf("- name: Daily history snapshot"), yml.indexOf("- name: Fail the run when Worker usage"));
   assert.ok(/GH_TOKEN: \$\{\{ github\.token \}\}/.test(snapStep), "the push step gets the token");
   assert.equal((yml.match(/github\.token/g) ?? []).length, 1, "and nothing else does");
-  assert.ok(snapStep.includes("git diff --cached --quiet ||"), "nothing staged, nothing committed");
-  assert.ok(snapStep.indexOf("git pull --rebase") > 0 && snapStep.indexOf("git pull --rebase") < snapStep.indexOf("git push"), "rebase before the push");
+  const sh = readText(fileURLToPath(new URL("./publish-snapshot.sh", import.meta.url)), "utf8");
+  assert.ok(sh.includes("git diff --cached --quiet ||"), "nothing staged, nothing committed");
+  const sync = sh.indexOf("git reset --quiet --hard FETCH_HEAD");
+  const decide = sh.indexOf("node \"$here/snapshot-history.mjs\"");
+  assert.ok(sync > 0 && sync < decide && decide < sh.indexOf("git push --quiet"), "sync to the remote tip, then decide, then push");
 });
 
 test("gitignore keeps the built files out and history in", () => {
