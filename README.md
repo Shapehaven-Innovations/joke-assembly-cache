@@ -43,7 +43,7 @@ The app already protects itself: after two failed fetches of the static file it 
 To move to another host with no app release:
 
 1. Keep `scripts/build-counts.mjs`, `scripts/build-top.mjs` and `scripts/snapshot-history.mjs` unchanged. The export and build steps stay the same on any host.
-2. If the new host is a new repository or a different CI system, re-create the `EXPORT_KEY` secret and the `EXPORT_URL` variable there; they do not carry over. In the workflow, replace only the last three steps (`actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`) with the new host's static-deploy step. For example, Cloudflare Pages with `wrangler pages deploy public --project-name <name>` (needs the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`), GitLab Pages (publish the `public` directory as the pages artifact), or Netlify (deploy the `public` directory). Add whatever credentials that host needs as repository or CI secrets, and remove the `pages: write` / `id-token: write` permissions and the `github-pages` environment if they are no longer needed.
+2. If the new host is a new repository or a different CI system, re-create the `EXPORT_KEY` secret and the `EXPORT_URL` variable there; they do not carry over. In the workflow, replace only the Pages steps (`actions/configure-pages`, `actions/upload-pages-artifact` and the `actions/deploy-pages` attempts with their waits) with the new host's static-deploy step. For example, Cloudflare Pages with `wrangler pages deploy public --project-name <name>` (needs the repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`), GitLab Pages (publish the `public` directory as the pages artifact), or Netlify (deploy the `public` directory). Add whatever credentials that host needs as repository or CI secrets, and remove the `pages: write` / `id-token: write` permissions and the `github-pages` environment if they are no longer needed.
 3. Point a hostname at the new host and confirm both `counts.json` and `top.json` are served over HTTPS (the app derives the `top.json` URL from the first non-Worker `counts.json` source).
 4. Set the Worker variable `COUNTS_SOURCES` to the new URL. It accepts a comma-separated list, primary first, so you can keep the old URL second while it still works. Redeploy the Worker.
 5. The app picks up the new source from `/v1/config` within an hour; no app update is required.
@@ -51,6 +51,10 @@ To move to another host with no app release:
 ## Why the file stays small and polite
 
 Only jokes with at least 5 reactions are published, which keeps `counts.json` to a few KB and avoids exposing very small, easily identifiable samples. Entries that are malformed (bad ids, negative or non-integer numbers) are dropped by the builder instead of being published. The app fetches the file with a plain GET (an ephemeral URLSession with no persistent HTTP cache, so no ETag revalidation) at most every 30 minutes per device, and the workflow refreshes it only every 30 minutes, so the load on GitHub Pages is light.
+
+## Deploy retries
+
+GitHub sometimes does not list the uploaded Pages artifact for a few seconds, and `actions/deploy-pages` then fails with `No artifacts named "github-pages" were found`. The workflow tries the deploy up to three times, waiting 20 and then 60 seconds. A run that recovers is green and keeps the failed attempt's error annotation. If all three fail, wait for the next scheduled run or start a new one with "Run workflow"; do not use "Re-run jobs", which uploads a second artifact with the same name.
 
 ## Keeping the schedule alive (60-day rule)
 
