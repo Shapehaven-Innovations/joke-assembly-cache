@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 5
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy_retry.outputs.page_url || steps.deploy_last.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -44,7 +44,22 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: public
+      # GitHub can list no artifact for several seconds after the upload has finalized it, and deploy-pages looks only once
+      # ("No artifacts named github-pages were found", actions/deploy-pages#451). Retry the deploy inside this job: re-running
+      # the job uploads a second artifact with the same name, and the deploy then fails with "Multiple artifacts".
       - id: deploy
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - if: steps.deploy.outcome == 'failure'
+        run: sleep 20
+      - id: deploy_retry
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - if: steps.deploy_retry.outcome == 'failure'
+        run: sleep 60
+      - id: deploy_last
+        if: steps.deploy_retry.outcome == 'failure'
         uses: actions/deploy-pages@v5
       # After the deploy on purpose: a failed push never delays counts.json or top.json. Pushes made with GITHUB_TOKEN start no
       # new workflow run, and only public/ is published, so history/ is never served.
