@@ -13,7 +13,7 @@ A scheduled GitHub Action calls the backend's private export endpoint with a key
 3. Recommended first: verify the domain at account level (your account or organisation Settings > Pages > Add a domain, then add the TXT record GitHub shows). Verification stops other accounts from taking over the domain if the Pages site is ever removed. Then, in the repository's Settings > Pages, set Custom domain to `cache-jokeassembly.shapehaveninnovations.com`, save, and tick "Enforce HTTPS" once the certificate has been issued (this can take a few minutes after DNS resolves).
 4. In your DNS zone for `shapehaveninnovations.com`, add a CNAME record with name `cache-jokeassembly` pointing to `<account-or-org>.github.io`, where `<account-or-org>` is the GitHub user or organisation that owns the repo. If the zone is on Cloudflare, set the record to "DNS only" (grey cloud), not proxied, so GitHub can issue the certificate.
 5. Go to Settings > Secrets and variables > Actions. Under Secrets add a repository secret `EXPORT_KEY` whose value is identical to the Worker's `EXPORT_KEY` secret. Under Variables add a repository variable `EXPORT_URL` with the value `https://<worker-host>/internal/export`, where `<worker-host>` is the hostname of the deployed Lounge Worker.
-6. Open the Actions tab, choose the `publish-counts` workflow and click "Run workflow" to publish the first snapshot. After that it runs automatically every 30 minutes.
+6. Open the Actions tab, choose the `publish-counts` workflow and click "Run workflow" to publish the first snapshot. After that it runs on a schedule (see "How often it really runs").
 
 ## Usage alert (the Free plan has no notifications)
 
@@ -38,7 +38,7 @@ The response should be JSON beginning `{"v":1,...` with a `generatedAt` timestam
 
 ## If GitHub flags or removes the repo, Pages or the Action (runbook)
 
-The app already protects itself: after two failed fetches of the static file it falls back to the Worker's `/v1/counts` endpoint, at most once every 2 hours per device, and a miss on that endpoint is protected by the Worker's daily budget guard (a cached copy is served before the guard, so hits are not counted by it, though they are still Worker requests on the account). So an outage here degrades freshness but does not break the app.
+The app already protects itself: after two failed fetches of the static file (a file whose `generatedAt` is more than 6 hours old counts as failed) it falls back to the Worker's `/v1/counts` endpoint, at most once every 2 hours per device, and a miss on that endpoint is protected by the Worker's daily budget guard (a cached copy is served before the guard, so hits are not counted by it, though they are still Worker requests on the account). So an outage here degrades freshness but does not break the app.
 
 To move to another host with no app release:
 
@@ -50,11 +50,19 @@ To move to another host with no app release:
 
 ## Why the file stays small and polite
 
-Only jokes with at least 5 reactions are published, which keeps `counts.json` to a few KB and avoids exposing very small, easily identifiable samples. Entries that are malformed (bad ids, negative or non-integer numbers) are dropped by the builder instead of being published. The app fetches the file with a plain GET (an ephemeral URLSession with no persistent HTTP cache, so no ETag revalidation) at most every 30 minutes per device, and the workflow refreshes it only every 30 minutes, so the load on GitHub Pages is light.
+Only jokes with at least 5 reactions are published, which keeps `counts.json` to a few KB and avoids exposing very small, easily identifiable samples. Entries that are malformed (bad ids, negative or non-integer numbers) are dropped by the builder instead of being published. The app fetches the file with a plain GET (an ephemeral URLSession with no persistent HTTP cache, so no ETag revalidation) at most every 30 minutes per device, and the workflow refreshes it at most twice an hour on schedule, so the load on GitHub Pages is light.
 
 ## Deploy retries
 
 GitHub sometimes does not list the uploaded Pages artifact for a few seconds, and `actions/deploy-pages` then fails with `No artifacts named "github-pages" were found`. The workflow tries the deploy up to three times, waiting 20 and then 60 seconds. A run that recovers is green and keeps the failed attempt's error annotation. If all three fail, wait for the next scheduled run or start a new one with "Run workflow"; do not use "Re-run jobs", which uploads a second artifact with the same name.
+
+## How often it really runs
+
+The workflow asks for two runs an hour (minutes 13 and 43). GitHub does not guarantee scheduled runs and delays or drops them under load. With the earlier `*/30` schedule, the last 100 scheduled runs measured on 2026-11-25 were a median of 6.7 hours apart (longest 12.6), so the file was often older than the app's 6 hour limit. To compare after a schedule change:
+
+```
+gh api "repos/OWNER/joke-assembly-cache/actions/workflows/publish-counts.yml/runs?per_page=100&event=schedule" -q '[.workflow_runs[].created_at | fromdateiso8601] | sort as $t | [range(1; $t|length) | ($t[.] - $t[.-1]) / 3600] | sort | {median_hours: .[length / 2 | floor], longest_hours: .[-1]}'
+```
 
 ## Keeping the schedule alive (60-day rule)
 
