@@ -1,7 +1,8 @@
 name: publish-counts
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # Twice an hour, away from :00 and :30. GitHub delays or drops scheduled runs under load, worst at the start of an hour.
+    - cron: "13,43 * * * *"
   workflow_dispatch: {}
 permissions:
   # contents: write is needed only by the daily history snapshot step at the end. Its one small commit a day also keeps the
