@@ -41,6 +41,9 @@ jobs:
         run: node scripts/build-counts.mjs export.json public/counts.json
       - name: Build top.json (never blocks counts)
         run: node scripts/build-top.mjs public/counts.json history public/top.json || echo "::warning::top.json was not built"
+      # Reads only data/samples.json and the clock: no secrets, no export, no network. A failure never blocks counts.json.
+      - name: Build AI-readable files (never blocks counts)
+        run: node scripts/build-ai-files.mjs data/samples.json public || echo "::warning::AI files were not built"
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

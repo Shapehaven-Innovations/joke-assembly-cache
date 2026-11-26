@@ -1,0 +1,218 @@
+[
+ {
+  "id": "dad-005",
+  "category": "Dad",
+  "setup": "Why did the bicycle fall over?",
+  "punchline": "It was two-tired."
+ },
+ {
+  "id": "dad-013",
+  "category": "Dad",
+  "setup": "Why do golfers keep an extra pair of pants in the bag?",
+  "punchline": "In case they get a hole in one."
+ },
+ {
+  "id": "dad-021",
+  "category": "Dad",
+  "setup": "My broom was late for work today.",
+  "punchline": "It said it over-swept."
+ },
+ {
+  "id": "dad-029",
+  "category": "Dad",
+  "setup": "What did the grape do when it got stepped on?",
+  "punchline": "Nothing, it just let out a little wine."
+ },
+ {
+  "id": "dad-037",
+  "category": "Dad",
+  "setup": "What do you call a bee that can't make up its mind?",
+  "punchline": "A maybe."
+ },
+ {
+  "id": "puns-004",
+  "category": "Puns",
+  "setup": "What do you call a lazy kangaroo?",
+  "punchline": "Pouch potato."
+ },
+ {
+  "id": "puns-012",
+  "category": "Puns",
+  "setup": "I'm a huge fan of ceiling fans.",
+  "punchline": "They're really cool."
+ },
+ {
+  "id": "puns-019",
+  "category": "Puns",
+  "setup": "Did you hear about the cheese factory explosion?",
+  "punchline": "All that was left was de-brie."
+ },
+ {
+  "id": "puns-026",
+  "category": "Puns",
+  "setup": "How do you fix a broken pizza?",
+  "punchline": "With tomato paste."
+ },
+ {
+  "id": "puns-034",
+  "category": "Puns",
+  "setup": "Why did the orange stop in the middle of the road?",
+  "punchline": "It ran out of juice."
+ },
+ {
+  "id": "food-004",
+  "category": "Food",
+  "setup": "Why did the tomato lose the race?",
+  "punchline": "It couldn't ketchup."
+ },
+ {
+  "id": "food-012",
+  "category": "Food",
+  "setup": "What did the lettuce say to the celery?",
+  "punchline": "Stop stalking me."
+ },
+ {
+  "id": "food-020",
+  "category": "Food",
+  "setup": "What do you call a cheese that is made backward?",
+  "punchline": "Edam."
+ },
+ {
+  "id": "food-027",
+  "category": "Food",
+  "setup": "What did the hot dog say when it won the race?",
+  "punchline": "I relish this victory."
+ },
+ {
+  "id": "food-035",
+  "category": "Food",
+  "setup": "What did the sushi say to the bee?",
+  "punchline": "Wasabi!"
+ },
+ {
+  "id": "animals-004",
+  "category": "Animals",
+  "setup": "What do you call a sleeping dinosaur?",
+  "punchline": "A dino-snore."
+ },
+ {
+  "id": "animals-012",
+  "category": "Animals",
+  "setup": "What do you call an elephant that doesn't matter?",
+  "punchline": "An irrelephant."
+ },
+ {
+  "id": "animals-020",
+  "category": "Animals",
+  "setup": "Why do hummingbirds hum?",
+  "punchline": "They forgot the words."
+ },
+ {
+  "id": "animals-028",
+  "category": "Animals",
+  "setup": "What do penguins wear on their heads?",
+  "punchline": "Ice caps."
+ },
+ {
+  "id": "animals-036",
+  "category": "Animals",
+  "setup": "Why do seagulls fly over the sea?",
+  "punchline": "If they flew over the bay, they'd be bagels."
+ },
+ {
+  "id": "work-005",
+  "category": "Work",
+  "setup": "What did the electrician say to the nervous apprentice?",
+  "punchline": "Stay positive."
+ },
+ {
+  "id": "work-015",
+  "category": "Work",
+  "setup": "Why was the meeting so short?",
+  "punchline": "Nobody wanted to take the minutes."
+ },
+ {
+  "id": "work-024",
+  "category": "Work",
+  "setup": "What does the printer need to work harder?",
+  "punchline": "A little ink-centive."
+ },
+ {
+  "id": "work-034",
+  "category": "Work",
+  "setup": "Did you hear about the cleaner who won an award?",
+  "punchline": "Her work was spotless."
+ },
+ {
+  "id": "science-005",
+  "category": "Science",
+  "setup": "Why was the electron always in a bad mood?",
+  "punchline": "It was always negative."
+ },
+ {
+  "id": "science-015",
+  "category": "Science",
+  "setup": "What do you call a tooth in a glass of water?",
+  "punchline": "A one-molar solution."
+ },
+ {
+  "id": "science-025",
+  "category": "Science",
+  "setup": "I'd tell you a chemistry joke.",
+  "punchline": "But I know I wouldn't get a reaction."
+ },
+ {
+  "id": "science-035",
+  "category": "Science",
+  "setup": "Why did the amoeba cross the road?",
+  "punchline": "To divide to the other side."
+ },
+ {
+  "id": "school-005",
+  "category": "School",
+  "setup": "Why did the teacher wear sunglasses to class?",
+  "punchline": "Her students were so bright."
+ },
+ {
+  "id": "school-014",
+  "category": "School",
+  "setup": "What did the dictionary say to the thesaurus?",
+  "punchline": "You are the same as me, only different."
+ },
+ {
+  "id": "school-024",
+  "category": "School",
+  "setup": "Why did the student take a ruler to bed?",
+  "punchline": "To see how long he slept."
+ },
+ {
+  "id": "school-033",
+  "category": "School",
+  "setup": "Why did the library book get nervous?",
+  "punchline": "It was overdue."
+ },
+ {
+  "id": "tech-005",
+  "category": "Tech",
+  "setup": "Why do Java developers wear glasses?",
+  "punchline": "Because they don't C sharp."
+ },
+ {
+  "id": "tech-015",
+  "category": "Tech",
+  "setup": "What did the tablet say when it was dropped?",
+  "punchline": "That really cracked me up."
+ },
+ {
+  "id": "tech-024",
+  "category": "Tech",
+  "setup": "Why do programmers hate nature?",
+  "punchline": "Too many bugs."
+ },
+ {
+  "id": "tech-034",
+  "category": "Tech",
+  "setup": "Why did the robot go on vacation?",
+  "punchline": "To recharge its batteries."
+ }
+]

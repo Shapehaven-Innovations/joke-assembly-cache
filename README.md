@@ -2,7 +2,7 @@
 
 ## What this is
 
-This repository publishes the public, aggregate reaction counts (laughs and groans per joke) for the free Joke Assembly app. It serves two small files through GitHub Pages: `counts.json` (joke ids and two totals per joke) and `top.json` (the app's "Top jokes": up to 10 joke ids with a weekly laugh gain and up to 10 with all-time laughs; ids and integers only). `history/` holds one copy of `counts.json` per UTC day (newest 8, only jokes with 5+ reactions, never the raw export, never the usage block); it is not published. It contains no personal data, no user identifiers and no per-device information. This is not a commercial service and nothing here is sold or monetised; it exists only so the free app can show how other people reacted to a joke without every device querying the backend directly.
+This repository publishes the public, aggregate reaction counts (laughs and groans per joke) for the free Joke Assembly app. It serves small static files through GitHub Pages: `counts.json` (joke ids and two totals per joke) and `top.json` (the app's "Top jokes": up to 10 joke ids with a weekly laugh gain and up to 10 with all-time laughs; ids and integers only). `history/` holds one copy of `counts.json` per UTC day (newest 8, only jokes with 5+ reactions, never the raw export, never the usage block); it is not published. It contains no personal data, no user identifiers and no per-device information. This is not a commercial service and nothing here is sold or monetised; it exists only so the free app can show how other people reacted to a joke without every device querying the backend directly.
 
 A scheduled GitHub Action calls the backend's private export endpoint with a key, runs `scripts/build-counts.mjs` to validate and trim the data, runs `scripts/build-top.mjs` to build `top.json`, and deploys the result to Pages.
 
@@ -25,6 +25,27 @@ The Worker's export response also carries a `usage` block (requests used and the
 
 The weekly gain compares today's laughs with the snapshot dated 7 days earlier (else 6, else 8 days earlier; with none, the weekly list is empty). A joke that is not in the baseline had fewer than 5 reactions then, so its gain is computed as `laughs - 4` (a lower bound). Negative gains clamp to 0. Both lists are capped at 10 rows. If building `top.json` fails, the step only prints a warning: `counts.json` is still published. The first weekly list appears 6-7 days after the first snapshot.
 
+## AI discovery (static files for AI tools)
+
+`scripts/build-ai-files.mjs` writes these into `public/` on every run, so AI assistants and agents can read Joke Assembly data with plain GET requests and no server. It reads only `data/samples.json` and the clock: no secrets, no export, no network, and no user, device or Lounge data. A failure only prints a warning; `counts.json` is still published.
+
+| File | What it is |
+| --- | --- |
+| `joke-of-the-day.json` | One joke per UTC day from the sample set, with `source` (name, App Store URL, license note). |
+| `jokes.json` | The sample list only (`sample: true`, `count`), labelled as a sample and not the full catalog. |
+| `llms.txt` | Short description for LLMs: what the app is, each endpoint, caveats, attribution request, contact. |
+| `openapi.json` | OpenAPI 3.1 description of the four GET data files. |
+| `robots.txt` | Explicitly allows GPTBot, ClaudeBot, anthropic-ai, PerplexityBot, Google-Extended, CCBot and Applebot-Extended, and names the sitemap. |
+| `sitemap.xml` | Lists the files above plus `counts.json` and `top.json`. |
+
+How AI tools should use it: start at `/llms.txt`, fetch `/joke-of-the-day.json` for "a joke", show the joke as written, say it comes from Joke Assembly and link to the app. `top.json` and `counts.json` are anonymous aggregates (refresh times vary, check `generatedAt`; the weekly list appears after a week of snapshots).
+
+The full joke catalog is intentionally NOT published. `data/samples.json` holds about 36 jokes (roughly 12%, spread over all categories), copied verbatim from the app's `jokes.json`. A test checks this against the catalog when the app repository is present (it skips with a message in the public cache repo). To change the sample, edit `data/samples.json` (at most 60 entries) and run the tests.
+
+The App Store URL in the files is `https://apps.apple.com/us/app/joke-assembly/id6502868916`, set once as the `APP_STORE_URL` constant in `scripts/build-ai-files.mjs`.
+
+A real MCP server (Tier 2, on a separate free Cloudflare account) is a later step and needs the owner's approval; nothing here depends on it.
+
 ## Verify
 
 Run:
@@ -32,6 +53,8 @@ Run:
 ```
 curl -s https://cache-jokeassembly.shapehaveninnovations.com/counts.json
 curl -s https://cache-jokeassembly.shapehaveninnovations.com/top.json
+curl -s https://cache-jokeassembly.shapehaveninnovations.com/joke-of-the-day.json
+curl -s https://cache-jokeassembly.shapehaveninnovations.com/llms.txt
 ```
 
 The response should be JSON beginning `{"v":1,...` with a `generatedAt` timestamp and a `counts` object. The app shows counts after its next refresh (it only shows a joke's counts once that joke has at least 5 reactions).
